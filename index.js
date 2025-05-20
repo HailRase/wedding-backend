@@ -1,37 +1,34 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const Guest = require('./models/Guest');
+import express from 'express';
+import cors from 'cors';
+import pool from './db.js';
 
 const app = express();
+const PORT = process.env.PORT || 10000;
+
 app.use(cors());
 app.use(express.json());
 
-// Подключение к БД
-mongoose.connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-});
-
-// Роуты
 app.post('/guests', async (req, res) => {
-    const guest = new Guest(req.body);
-    await guest.save();
-    res.status(201).json(guest);
+    const { fio, presence, peopleCount, alcogols } = req.body;
+    const result = await pool.query(
+        `INSERT INTO guests (fio, presence, people_count, alcogols)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+        [fio, presence, peopleCount, alcogols]
+    );
+    res.json(result.rows[0]);
 });
 
 app.get('/guests', async (req, res) => {
-    const guests = await Guest.find();
-    res.json(guests);
+    const result = await pool.query('SELECT * FROM guests ORDER BY id DESC');
+    res.json(result.rows);
 });
 
 app.delete('/guests/:id', async (req, res) => {
-    await Guest.findByIdAndDelete(req.params.id);
-    res.status(204).send();
+    const { id } = req.params;
+    await pool.query('DELETE FROM guests WHERE id = $1', [id]);
+    res.json({ success: true });
 });
 
-const port = process.env.PORT || 10000;
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
