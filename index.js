@@ -9,13 +9,20 @@ app.use(cors());
 app.use(express.json());
 
 app.post('/guests', async (req, res) => {
-    const { fio, presence, peopleCount, alcogols } = req.body;
-    const result = await pool.query(
-        `INSERT INTO guests (fio, presence, people_count, alcogols)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-        [fio, presence, peopleCount, alcogols]
-    );
-    res.json(result.rows[0]);
+    try {
+        const { fio, presence, peopleCount, alcogols } = req.body;
+
+        const result = await pool.query(
+            `INSERT INTO guests (fio, presence, people_count, alcogols)
+       VALUES ($1, $2, $3, $4::text[]) RETURNING *`,
+            [fio, presence, peopleCount, alcogols]
+        );
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Ошибка при добавлении гостя:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 app.get('/guests', async (req, res) => {
